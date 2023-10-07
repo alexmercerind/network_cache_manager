@@ -1,0 +1,14 @@
+name: network_cache_manager
+description: A library to cache network resources locally.
+version: 1.0.0
+repository: https://github.com/alexmercerind/network_cache_manager
+
+environment:
+  sdk: ^2.18.0
+
+dependencies:
+  path: ^1.8.0
+
+dev_dependencies:
+  lints: ^2.0.0
+  test: ^1.21.0
