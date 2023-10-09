@@ -5,7 +5,8 @@
 // Use of this source code is governed by MIT license that can be found in the LICENSE file.
 
 import 'dart:io';
-import 'package:network_cache_manager/src/logger.dart';
+import 'package:meta/meta.dart';
+
 import 'package:network_cache_manager/src/models/network_resource.dart';
 
 /// {@template network_connection_handler}
@@ -26,34 +27,35 @@ class NetworkConnectionHandler {
   final Map<int, HttpClient> clients = {};
 
   /// The [HttpServer] instance.
-  final Future<HttpServer> server;
+  late final HttpServer server;
+
+  /// {@macro network_connection_handler}
+  NetworkConnectionHandler(this.port);
+
+  /// Initializes this instance.
+  Future<void> ensureInitialized() async {
+    server = await HttpServer.bind('127.0.0.1', port);
+    server.listen(handler);
+  }
 
   /// Creates a new [NetworkResource] currently being handled by this instance.
   String create(String uri, {int? id}) {
     final resource = NetworkResource(uri, id: id);
     int key = resources.length;
     resources[key] = resource;
-    return '127.0.0.1:$port/$key';
-  }
-
-  /// {@macro network_connection_handler}
-  NetworkConnectionHandler(this.port)
-      : server = HttpServer.bind('127.0.0.1', port) {
-    server.then((server) => server.listen(_handler));
+    return '${server.address.address}/$key';
   }
 
   /// Creates a new [HttpClient] for the [NetworkResource] with the given [key].
   /// The existing (if any) [HttpClient] is closed.
-  Future<HttpClientResponse> _connect(
+  @visibleForTesting
+  Future<HttpClientResponse> connect(
     int key,
     Map<String, String> headers,
   ) async {
     try {
       clients[key]?.close(force: true);
-    } catch (exception, stacktrace) {
-      Logger.instance.e(exception);
-      Logger.instance.e(stacktrace);
-    }
+    } catch (_) {}
     final client = HttpClient();
     final uri = resources[key]?.uri ?? '';
     final request = await client.getUrl(Uri.parse(uri));
@@ -61,30 +63,16 @@ class NetworkConnectionHandler {
       request.headers.add(entry.key, entry.value);
     }
     final response = await request.close();
-
-    Logger.instance.i('----------');
-    Logger.instance.i('NetworkConnectionHandler._connect');
-    Logger.instance.i('Status Code: ${response.statusCode}');
-    Logger.instance.i('Headers: ${response.headers}');
-    Logger.instance.i('----------');
-
     return response;
   }
 
   /// HTTP request handler.
-  Future<void> _handler(HttpRequest request) async {
+  @visibleForTesting
+  Future<void> handler(HttpRequest request) async {
     if (request.method == 'GET') {
       final key = int.tryParse(request.uri.path.substring(1));
       final uri = resources[key]?.uri;
       final headers = request.headers;
-
-      Logger.instance.i('----------');
-      Logger.instance.i('NetworkConnectionHandler._handler');
-      Logger.instance.i('Key: $key');
-      Logger.instance.i('URI: $uri');
-      Logger.instance.i('Headers: $headers');
-      Logger.instance.i('----------');
-
       if (key != null && uri != null) {
         final headers = <String, String>{};
 
@@ -95,7 +83,7 @@ class NetworkConnectionHandler {
         }
 
         try {
-          final response = await _connect(key, headers);
+          final response = await connect(key, headers);
           response.headers.forEach((name, values) {
             for (final value in values) {
               request.response.headers.add(name, value);
@@ -103,10 +91,8 @@ class NetworkConnectionHandler {
           });
           request.response.statusCode = response.statusCode;
           await response.pipe(request.response);
-        } catch (exception, stacktrace) {
+        } catch (_) {
           // TODO: Probably evict the resource from cache & try again.
-          Logger.instance.e(exception);
-          Logger.instance.e(stacktrace);
         }
       }
     }
