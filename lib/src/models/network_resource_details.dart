@@ -10,17 +10,46 @@ import 'package:network_cache_manager/src/models/network_resource.dart';
 ///
 /// NetworkResourceDetails
 /// ----------------------
-///
-/// Network resource with additional details.
+/// Network resource with additional details fetched from the HTTP response.
 ///
 /// {@endtemplate}
 class NetworkResourceDetails extends NetworkResource {
-  /// The response headers of the resource.
-  final Map<String, String> headers;
+  /// Size of the resource.
+  /// The value of "Content-Length" header from the HTTP response.
+  /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests
+  final int size;
+
+  /// Whether the resource is resumable.
+  /// The value of "Accept-Ranges" header from the HTTP response.
+  /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests
+  final bool resumable;
 
   /// {@macro network_resource_details}
   NetworkResourceDetails(
     NetworkResource resource,
-    this.headers,
+    this.size,
+    this.resumable,
   ) : super(resource.uri, id: resource.id);
+
+  @override
+  String toString() => 'NetworkResourceDetails('
+      'uri: $uri, '
+      'id: $id, '
+      'size: $size, '
+      'resumable: $resumable'
+      ')';
+
+  factory NetworkResourceDetails.fromJson(dynamic json) =>
+      NetworkResourceDetails(
+        NetworkResource.fromJson(json),
+        json['size'],
+        json['resumable'],
+      );
+
+  @override
+  Map<String, dynamic> toJson() => {
+        ...super.toJson(),
+        'size': size,
+        'resumable': resumable,
+      };
 }

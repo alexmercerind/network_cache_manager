@@ -8,7 +8,6 @@
 ///
 /// NetworkResource
 /// ---------------
-///
 /// A network resource referenced by a URI.
 /// Optionally, an ID may be provided to identify two or more resources with different URIs as the same resource.
 ///
@@ -32,4 +31,20 @@ class NetworkResource {
 
   @override
   int get hashCode => id.hashCode;
+
+  @override
+  String toString() => 'NetworkResource('
+      'uri: $uri, '
+      'id: $id'
+      ')';
+
+  factory NetworkResource.fromJson(dynamic json) => NetworkResource(
+        json['uri'],
+        id: json['id'],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'uri': uri,
+        'id': id,
+      };
 }
