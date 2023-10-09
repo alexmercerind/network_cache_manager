@@ -28,7 +28,7 @@ void main() {
     () {
       expect(
         NetworkResource(resources[0]).id,
-        equals(resources[0]),
+        equals(resources[0].hashCode),
       );
     },
   );
