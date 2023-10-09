@@ -43,7 +43,7 @@ class NetworkConnectionHandler {
     final resource = NetworkResource(uri, id: id);
     int key = resources.length;
     resources[key] = resource;
-    return '${server.address.address}/$key';
+    return '${server.address.address}:${server.port}/$key';
   }
 
   /// Creates a new [HttpClient] for the [NetworkResource] with the given [key].
@@ -76,7 +76,7 @@ class NetworkConnectionHandler {
       if (key != null && uri != null) {
         final headers = <String, String>{};
 
-        // TODO: Selection of headers to be forwarded.
+        // TODO:
         final range = request.headers.value('range');
         if (range != null) {
           headers['range'] = range;
@@ -92,7 +92,7 @@ class NetworkConnectionHandler {
           request.response.statusCode = response.statusCode;
           await response.pipe(request.response);
         } catch (_) {
-          // TODO: Probably evict the resource from cache & try again.
+          // TODO:
         }
       }
     }

@@ -21,7 +21,7 @@ import 'package:network_cache_manager/src/models/network_resource_details.dart';
 /// Implementation to handle [NetworkResource] file-system caching.
 ///
 /// {@endtemplate}
-class NetworkCacheManager {
+class NetworkCacheHandler {
   /// The default cache chunk size for each [NetworkResource].
   static const int kCacheChunkSize = 4 * 1024 * 1024;
 
@@ -35,11 +35,14 @@ class NetworkCacheManager {
   final HashMap<int, CacheEntry> entries = HashMap<int, CacheEntry>();
 
   /// {@macro network_cache_handler}
-  NetworkCacheManager(this.directory);
+  NetworkCacheHandler(this.directory);
 
   /// Initializes this instance.
   Future<void> ensureInitialized() {
     return lock.synchronized(() async {
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
       final contents = directory.listSync(recursive: false, followLinks: false);
       for (final entity in contents) {
         try {
@@ -123,17 +126,27 @@ class NetworkCacheManager {
     });
   }
 
-  Future<void> exists(NetworkCacheManager resource) {
-    return lock.synchronized(() async {});
+  Future<void> exists(NetworkResourceDetails resource) {
+    return lock.synchronized(() async {
+      // TODO:
+    });
   }
 
-  Future<void> create(NetworkCacheManager resource) {
-    return lock.synchronized(() async {});
+  Future<void> create(NetworkResourceDetails resource) {
+    return lock.synchronized(() async {
+      // TODO:
+    });
   }
 
   Future<void> evict(NetworkResourceDetails resource) {
-    return lock.synchronized(() async {});
+    return lock.synchronized(() async {
+      // TODO:
+    });
   }
+
+  // TODO: Probably:
+  // 1. Move I/O to separate [Isolate].
+  // 2. Use separate [Lock] for each [NetworkResource].
 
   @visibleForTesting
   Future<List<int>> read(
@@ -158,7 +171,7 @@ class NetworkCacheManager {
     int end,
   ) async {
     final current = await read(resource, index);
-    current.setRange(start, end + 1, current);
+    current.setRange(start, end + 1, data);
     final path = join(directory.path, resource.id.toString(), index.toString());
     final file = File(path);
     if (!await file.exists()) {
