@@ -74,7 +74,6 @@ class NetworkCacheHandler {
         final indexEnd = end ~/ kCacheChunkSize;
         final offsetStart = start % kCacheChunkSize;
         final offsetEnd = end % kCacheChunkSize;
-
         for (int i = indexStart; i <= indexEnd; i++) {
           if (i == indexStart && i == indexEnd) {
             // Single chunk; same chunk contains [start, end] range.
@@ -116,7 +115,6 @@ class NetworkCacheHandler {
         }
 
         final timestamp = DateTime.now();
-
         final current = entries[resource.id];
         if (current == null) {
           // First:
@@ -165,31 +163,42 @@ class NetworkCacheHandler {
             updatedAt: timestamp,
           );
         }
+
+        await sync();
       } catch (_) {}
-    });
-  }
-
-  Future<void> exists(NetworkResourceDetails resource) {
-    return lock.synchronized(() async {
-      // TODO:
-    });
-  }
-
-  Future<void> create(NetworkResourceDetails resource) {
-    return lock.synchronized(() async {
-      // TODO:
     });
   }
 
   Future<void> evict(NetworkResourceDetails resource) {
     return lock.synchronized(() async {
-      // TODO:
+      try {
+        final path = join(this.directory.path, resource.id.toString());
+        final directory = Directory(path);
+        if (await directory.exists()) {
+          await directory.delete(recursive: true);
+        }
+      } catch (_) {}
+      try {
+        entries.remove(resource.id);
+      } catch (_) {}
     });
   }
 
   // TODO: Probably:
   // 1. Move I/O to separate [Isolate].
   // 2. Use separate [Lock] for each [NetworkResource].
+
+  Future<void> sync() async {
+    for (final entry in entries.entries) {
+      try {
+        final path = join(directory.path, entry.key.toString(), '.index');
+        final file = File(path);
+        await file.writeAsString(
+          JsonEncoder.withIndent('    ').convert(entry.value),
+        );
+      } catch (_) {}
+    }
+  }
 
   @visibleForTesting
   Future<List<int>> read(
