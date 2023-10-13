@@ -52,4 +52,21 @@ class NetworkResourceDetails extends NetworkResource {
         'size': size,
         'resumable': resumable,
       };
+
+  @override
+  NetworkResourceDetails copyWith({
+    String? uri,
+    int? id,
+    int? size,
+    bool? resumable,
+  }) {
+    return NetworkResourceDetails(
+      NetworkResource(
+        uri ?? this.uri,
+        id: id ?? this.id,
+      ),
+      size ?? this.size,
+      resumable ?? this.resumable,
+    );
+  }
 }

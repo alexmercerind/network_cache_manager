@@ -47,4 +47,14 @@ class NetworkResource {
         'uri': uri,
         'id': id,
       };
+
+  NetworkResource copyWith({
+    String? uri,
+    int? id,
+  }) {
+    return NetworkResource(
+      uri ?? this.uri,
+      id: id ?? this.id,
+    );
+  }
 }

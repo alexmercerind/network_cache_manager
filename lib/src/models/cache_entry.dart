@@ -77,12 +77,12 @@ class CacheEntry {
         'updatedAt': updatedAt.toIso8601String(),
       };
 
-  CacheEntry copyWith(
+  CacheEntry copyWith({
     NetworkResourceDetails? details,
     SplayTreeMap<int, int>? chunks,
     DateTime? createdAt,
     DateTime? updatedAt,
-  ) {
+  }) {
     return CacheEntry(
       details ?? this.details,
       chunks ?? this.chunks,
