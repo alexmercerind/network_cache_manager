@@ -22,6 +22,8 @@ void main() {
     ),
   );
 
+  print(directory);
+
   Future<void> reset() async {
     try {
       final contents = directory.listSync();
@@ -36,6 +38,54 @@ void main() {
     } catch (_) {}
   }
 
+  test(
+    'network-cache-handler-ensure-initialized',
+    () async {
+      final first = NetworkCacheHandler(directory);
+      await first.ensureInitialized();
+
+      await first.update(
+        NetworkResourceDetails(
+          NetworkResource('', id: 0),
+          56 * 1024 * 1024,
+          true,
+        ),
+        List.generate(1024, (_) => 1),
+        0,
+        1024 - 1,
+      );
+      await first.update(
+        NetworkResourceDetails(
+          NetworkResource('', id: 0),
+          56 * 1024 * 1024,
+          true,
+        ),
+        List.generate(1024, (_) => 1),
+        2048,
+        2048 + 1024 - 1,
+      );
+      await first.update(
+        NetworkResourceDetails(
+          NetworkResource('', id: 1),
+          56 * 1024 * 1024,
+          true,
+        ),
+        List.generate(1024, (_) => 1),
+        0,
+        1024 - 1,
+      );
+
+      final second = NetworkCacheHandler(directory);
+      await second.ensureInitialized();
+
+      expect(
+        first.entries,
+        equals(
+          second.entries,
+        ),
+      );
+    },
+  );
   test(
     'network-cache-handler-update-chunks',
     () async {
@@ -201,13 +251,14 @@ void main() {
       // Test for creation.
       expect(
         contents.length,
-        equals(3),
+        equals(4),
       );
       expect(
         SetEquality().equals(
           contents.map((e) => e.path).toSet(),
           {
             for (int i = 0; i < 3; i++) path.join(entry.path, '$i'),
+            path.join(entry.path, '.index'),
           },
         ),
         equals(true),
@@ -216,7 +267,7 @@ void main() {
       expect(
         ListEquality().equals(
           await Future.wait(
-            contents.map(
+            contents.where((e) => int.tryParse(path.basename(e.path)) != null).map(
               (e) async {
                 final data = await e.readAsBytes();
                 return data.length;
@@ -237,10 +288,7 @@ void main() {
           await File(path.join(entry.path, '0')).readAsBytes(),
           [
             for (int i = 0; i < offset; i++) 0,
-            for (int i = 0;
-                i < NetworkCacheHandler.kCacheChunkSize - offset;
-                i++)
-              1,
+            for (int i = 0; i < NetworkCacheHandler.kCacheChunkSize - offset; i++) 1,
           ],
         ),
         equals(true),
@@ -258,18 +306,8 @@ void main() {
         ListEquality().equals(
           await File(path.join(entry.path, '2')).readAsBytes(),
           [
-            for (int i = 0;
-                i < size - 2 * NetworkCacheHandler.kCacheChunkSize + offset;
-                i++)
-              1,
-            for (int i = 0;
-                i <
-                    NetworkCacheHandler.kCacheChunkSize -
-                        (size -
-                            2 * NetworkCacheHandler.kCacheChunkSize +
-                            offset);
-                i++)
-              0,
+            for (int i = 0; i < size - 2 * NetworkCacheHandler.kCacheChunkSize + offset; i++) 1,
+            for (int i = 0; i < NetworkCacheHandler.kCacheChunkSize - (size - 2 * NetworkCacheHandler.kCacheChunkSize + offset); i++) 0,
           ],
         ),
         equals(true),
@@ -308,13 +346,14 @@ void main() {
       // Test for creation.
       expect(
         contents.length,
-        equals(2),
+        equals(3),
       );
       expect(
         SetEquality().equals(
           contents.map((e) => e.path).toSet(),
           {
             for (int i = 0; i < 2; i++) path.join(entry.path, '$i'),
+            path.join(entry.path, '.index'),
           },
         ),
         equals(true),
@@ -323,7 +362,7 @@ void main() {
       expect(
         ListEquality().equals(
           await Future.wait(
-            contents.map(
+            contents.where((e) => int.tryParse(path.basename(e.path)) != null).map(
               (e) async {
                 final data = await e.readAsBytes();
                 return data.length;
@@ -343,10 +382,7 @@ void main() {
           await File(path.join(entry.path, '0')).readAsBytes(),
           [
             for (int i = 0; i < offset; i++) 0,
-            for (int i = 0;
-                i < NetworkCacheHandler.kCacheChunkSize - offset;
-                i++)
-              1,
+            for (int i = 0; i < NetworkCacheHandler.kCacheChunkSize - offset; i++) 1,
           ],
         ),
         equals(true),
@@ -355,16 +391,8 @@ void main() {
         ListEquality().equals(
           await File(path.join(entry.path, '1')).readAsBytes(),
           [
-            for (int i = 0;
-                i < size - NetworkCacheHandler.kCacheChunkSize + offset;
-                i++)
-              1,
-            for (int i = 0;
-                i <
-                    NetworkCacheHandler.kCacheChunkSize -
-                        (size - NetworkCacheHandler.kCacheChunkSize + offset);
-                i++)
-              0,
+            for (int i = 0; i < size - NetworkCacheHandler.kCacheChunkSize + offset; i++) 1,
+            for (int i = 0; i < NetworkCacheHandler.kCacheChunkSize - (size - NetworkCacheHandler.kCacheChunkSize + offset); i++) 0,
           ],
         ),
         equals(true),
@@ -403,13 +431,14 @@ void main() {
       // Test for creation.
       expect(
         contents.length,
-        equals(2),
+        equals(3),
       );
       expect(
         SetEquality().equals(
           contents.map((e) => e.path).toSet(),
           {
             for (int i = 5; i < 5 + 2; i++) path.join(entry.path, '$i'),
+            path.join(entry.path, '.index'),
           },
         ),
         equals(true),
@@ -418,7 +447,7 @@ void main() {
       expect(
         ListEquality().equals(
           await Future.wait(
-            contents.map(
+            contents.where((e) => int.tryParse(path.basename(e.path)) != null).map(
               (e) async {
                 final data = await e.readAsBytes();
                 return data.length;
@@ -437,16 +466,8 @@ void main() {
         ListEquality().equals(
           await File(path.join(entry.path, '5')).readAsBytes(),
           [
-            for (int i = 0;
-                i < offset % NetworkCacheHandler.kCacheChunkSize;
-                i++)
-              0,
-            for (int i = 0;
-                i <
-                    NetworkCacheHandler.kCacheChunkSize -
-                        (offset % NetworkCacheHandler.kCacheChunkSize);
-                i++)
-              1,
+            for (int i = 0; i < offset % NetworkCacheHandler.kCacheChunkSize; i++) 0,
+            for (int i = 0; i < NetworkCacheHandler.kCacheChunkSize - (offset % NetworkCacheHandler.kCacheChunkSize); i++) 1,
           ],
         ),
         equals(true),
@@ -455,21 +476,8 @@ void main() {
         ListEquality().equals(
           await File(path.join(entry.path, '6')).readAsBytes(),
           [
-            for (int i = 0;
-                i <
-                    size -
-                        NetworkCacheHandler.kCacheChunkSize +
-                        offset % NetworkCacheHandler.kCacheChunkSize;
-                i++)
-              1,
-            for (int i = 0;
-                i <
-                    NetworkCacheHandler.kCacheChunkSize -
-                        (size -
-                            NetworkCacheHandler.kCacheChunkSize +
-                            offset % NetworkCacheHandler.kCacheChunkSize);
-                i++)
-              0,
+            for (int i = 0; i < size - NetworkCacheHandler.kCacheChunkSize + offset % NetworkCacheHandler.kCacheChunkSize; i++) 1,
+            for (int i = 0; i < NetworkCacheHandler.kCacheChunkSize - (size - NetworkCacheHandler.kCacheChunkSize + offset % NetworkCacheHandler.kCacheChunkSize); i++) 0,
           ],
         ),
         equals(true),
@@ -514,10 +522,7 @@ void main() {
           [
             for (int i = 0; i < 128; i++) 0,
             for (int i = 0; i < 1024; i++) 1,
-            for (int i = 0;
-                i < NetworkCacheHandler.kCacheChunkSize - 128 - 1024;
-                i++)
-              0,
+            for (int i = 0; i < NetworkCacheHandler.kCacheChunkSize - 128 - 1024; i++) 0,
           ],
         ),
         equals(true),
@@ -601,10 +606,7 @@ void main() {
           [
             for (int i = 0; i < 128; i++) 0,
             for (int i = 0; i < 1024; i++) 1,
-            for (int i = 0;
-                i < NetworkCacheHandler.kCacheChunkSize - 128 - 1024;
-                i++)
-              0,
+            for (int i = 0; i < NetworkCacheHandler.kCacheChunkSize - 128 - 1024; i++) 0,
           ],
         ),
         equals(true),
