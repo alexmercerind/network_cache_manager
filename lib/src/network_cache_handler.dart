@@ -5,10 +5,12 @@
 // Use of this source code is governed by MIT license that can be found in the LICENSE file.
 
 import 'dart:io';
+import 'dart:math';
 import 'dart:convert';
 import 'dart:collection';
-import 'package:meta/meta.dart';
 import 'package:path/path.dart';
+import 'package:meta/meta.dart';
+import 'package:collection/collection.dart';
 import 'package:synchronized/synchronized.dart';
 
 import 'package:network_cache_manager/src/models/cache_entry.dart';
@@ -29,9 +31,11 @@ class NetworkCacheHandler {
   final Directory directory;
 
   /// For mutual-exclusion.
+  @visibleForTesting
   final Lock lock = Lock();
 
   /// Currently cached [NetworkResource] entries.
+  @visibleForTesting
   final HashMap<int, CacheEntry> entries = HashMap<int, CacheEntry>();
 
   /// {@macro network_cache_handler}
@@ -66,9 +70,6 @@ class NetworkCacheHandler {
   ) {
     return lock.synchronized(() async {
       try {
-        final id = resource.id;
-        final entry = entries[id];
-
         final indexStart = start ~/ kCacheChunkSize;
         final indexEnd = end ~/ kCacheChunkSize;
         final offsetStart = start % kCacheChunkSize;
@@ -114,14 +115,56 @@ class NetworkCacheHandler {
           }
         }
 
-        // TODO:
+        final timestamp = DateTime.now();
 
-        entries[id] ??= CacheEntry(
-          resource,
-          SplayTreeMap<int, int>(),
-          DateTime.now(),
-          DateTime.now(),
-        );
+        final current = entries[resource.id];
+        if (current == null) {
+          // First:
+          entries[resource.id] = CacheEntry(
+            resource,
+            SplayTreeMap<int, int>.of(
+              {
+                start: end,
+              },
+            ),
+            timestamp,
+            timestamp,
+          );
+        } else {
+          // Subsequent:
+          int minimum = -1, maximum = -1;
+          // Insert the new range.
+          current.chunks[start] = max(current.chunks[start] ?? start, end);
+          // Handle & merge the overlapping ranges.
+          current.chunks.removeWhere(
+            (from, to) {
+              if ((from <= start && to >= end) ||
+                  (from >= start && to <= end) ||
+                  (from <= start && to >= start) ||
+                  (from <= end && to >= end)) {
+                minimum = {
+                  if (minimum != -1) minimum,
+                  start,
+                  from,
+                }.min;
+                maximum = {
+                  if (maximum != -1) maximum,
+                  end,
+                  to,
+                }.max;
+                return true;
+              }
+              return false;
+            },
+          );
+          if (minimum != -1 && maximum != -1) {
+            current.chunks[minimum] = maximum;
+          }
+          entries[resource.id] = current.copyWith(
+            chunks: current.chunks,
+            updatedAt: timestamp,
+          );
+        }
       } catch (_) {}
     });
   }

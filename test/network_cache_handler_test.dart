@@ -37,7 +37,140 @@ void main() {
   }
 
   test(
-    'network-cache-handler-update',
+    'network-cache-handler-update-chunks',
+    () async {
+      await reset();
+
+      final instance = NetworkCacheHandler(directory);
+      await instance.ensureInitialized();
+
+      final resource = NetworkResourceDetails(
+        NetworkResource(resources[0]),
+        56 * 1024 * 1024,
+        true,
+      );
+
+      // Fresh update.
+      await instance.update(
+        resource,
+        List.generate(1024, (_) => 1),
+        0,
+        1024 - 1,
+      );
+      print(instance.entries[resource.id]?.chunks);
+
+      expect(
+        MapEquality().equals(
+          instance.entries[resource.id]?.chunks,
+          {
+            0: 1024 - 1,
+          },
+        ),
+        isTrue,
+      );
+
+      // Update w/ overlapping range.
+      await instance.update(
+        resource,
+        List.generate(2048, (_) => 1),
+        0,
+        2048 - 1,
+      );
+      print(instance.entries[resource.id]?.chunks);
+
+      expect(
+        MapEquality().equals(
+          instance.entries[resource.id]?.chunks,
+          {
+            0: 2048 - 1,
+          },
+        ),
+        isTrue,
+      );
+
+      // Update w/ separate range.
+      await instance.update(
+        resource,
+        List.generate(2048, (_) => 1),
+        8192,
+        8192 + 2048 - 1,
+      );
+      print(instance.entries[resource.id]?.chunks);
+
+      expect(
+        MapEquality().equals(
+          instance.entries[resource.id]?.chunks,
+          {
+            0: 2048 - 1,
+            8192: 8192 + 2048 - 1,
+          },
+        ),
+        isTrue,
+      );
+
+      // Update w/ overlapping range, extending the end.
+      await instance.update(
+        resource,
+        List.generate(2048, (_) => 1),
+        1024,
+        1024 + 2048 - 1,
+      );
+      print(instance.entries[resource.id]?.chunks);
+
+      expect(
+        MapEquality().equals(
+          instance.entries[resource.id]?.chunks,
+          {
+            0: 1024 + 2048 - 1,
+            8192: 8192 + 2048 - 1,
+          },
+        ),
+        isTrue,
+      );
+
+      // Update w/ overlapping range, extending the start.
+      await instance.update(
+        resource,
+        List.generate(2048, (_) => 1),
+        7168,
+        7168 + 2048 - 1,
+      );
+      print(instance.entries[resource.id]?.chunks);
+
+      expect(
+        MapEquality().equals(
+          instance.entries[resource.id]?.chunks,
+          {
+            0: 1024 + 2048 - 1,
+            7168: 8192 + 2048 - 1,
+          },
+        ),
+        isTrue,
+      );
+
+      // Merge two ranges.
+
+      await instance.update(
+        resource,
+        List.generate(6144, (_) => 1),
+        2048,
+        2048 + 6144 - 1,
+      );
+      print(instance.entries[resource.id]?.chunks);
+
+      expect(
+        MapEquality().equals(
+          instance.entries[resource.id]?.chunks,
+          {
+            0: 8192 + 2048 - 1,
+          },
+        ),
+        isTrue,
+      );
+    },
+  );
+  test(
+    'network-cache-handler-update-data',
     () async {
       await reset();
 
@@ -144,7 +277,7 @@ void main() {
     },
   );
   test(
-    'network-cache-handler-update',
+    'network-cache-handler-update-data',
     () async {
       await reset();
 
@@ -239,7 +372,7 @@ void main() {
     },
   );
   test(
-    'network-cache-handler-update',
+    'network-cache-handler-update-data',
     () async {
       await reset();
 
@@ -344,7 +477,7 @@ void main() {
     },
   );
   test(
-    'network-cache-handler-read',
+    'network-cache-handler-read-data',
     () async {
       await reset();
 
@@ -392,7 +525,7 @@ void main() {
     },
   );
   test(
-    'network-cache-handler-read',
+    'network-cache-handler-read-data',
     () async {
       await reset();
 
@@ -425,7 +558,7 @@ void main() {
     },
   );
   test(
-    'network-cache-handler-write',
+    'network-cache-handler-write-data',
     () async {
       await reset();
 
